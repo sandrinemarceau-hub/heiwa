@@ -17,8 +17,8 @@ with st.form("form_paix"):
 
     if envoyer and nom and message:
         try:
-            # On lit la feuille (Onglet "Feuille 1")
-            df = conn.read(worksheet="Feuille 1")
+            # On lit la feuille (Onglet "Feuille1")
+            df = conn.read(worksheet="Feuille1")
             # On ajoute le message
             nouveau = pd.DataFrame([{"Auteur": nom, "Message": message}])
             df_final = pd.concat([df, nouveau], ignore_index=True)
@@ -34,7 +34,7 @@ st.divider()
 # --- AFFICHAGE ---
 st.subheader("💬 Mur de bienveillance")
 try:
-    data = conn.read(worksheet="Feuille 1")
+    data = conn.read(worksheet="Feuille1")
     for i, row in data.iloc[::-1].iterrows():
         st.write(f"**{row['Auteur']}** : {row['Message']}")
 except:
