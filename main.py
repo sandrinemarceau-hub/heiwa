@@ -9,41 +9,37 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("🌸 Heiwa")
 
-with st.form("form_paix", clear_on_submit=True):
+# --- FORMULAIRE ---
+with st.form("form_simple", clear_on_submit=True):
     nom = st.text_input("Ton prénom")
-    message = st.text_area("Ton message")
-    envoyer = st.form_submit_button("Partager")
+    msg = st.text_area("Ton message")
+    submit = st.form_submit_button("Partager")
 
-    if envoyer and nom and message:
+    if submit and nom and msg:
         try:
-            # 1. On lit uniquement les colonnes A et B pour éviter les colonnes fantômes
-            df = conn.read(worksheet="Feuille1", usecols=[0, 1])
+            # On lit la PREMIÈRE feuille du tableau (index 0)
+            df = conn.read(ttl=0) 
             
-            # 2. On s'assure que le tableau a les bons noms de colonnes
-            df.columns = ["Auteur", "Message"]
-            
-            # 3. On crée la nouvelle ligne proprement
-            nouveau = pd.DataFrame([{"Auteur": nom, "Message": message}])
-            
-            # 4. On fusionne
+            # On ajoute le nouveau message
+            nouveau = pd.DataFrame([{"Auteur": nom, "Message": msg}])
             df_final = pd.concat([df, nouveau], ignore_index=True)
             
-            # 5. On renvoie tout à Google
-            conn.update(worksheet="Feuille1", data=df_final)
-            
+            # On met à jour
+            conn.update(data=df_final)
             st.success("Message envoyé !")
             st.balloons()
         except Exception as e:
-            st.error(f"Erreur technique : {e}")
+            st.error(f"Erreur d'envoi : {e}")
 
 st.divider()
 
 # --- AFFICHAGE ---
 st.subheader("💬 Mur de bienveillance")
 try:
-    # On affiche les messages en ignorant les lignes vides
-    data = conn.read(worksheet="Feuille1", ttl=0).dropna(subset=["Auteur", "Message"])
-    for i, row in data.iloc[::-1].iterrows():
-        st.info(f"**{row['Auteur']}** : {row['Message']}")
-except:
-    st.write("Le mur est prêt à recevoir tes premiers mots.")
+    # On lit simplement la première feuille
+    data = conn.read(ttl=0)
+    if not data.empty:
+        for i, row in data.iloc[::-1].iterrows():
+            st.write(f"**{row['Auteur']}** : {row['Message']}")
+except Exception as e:
+    st.error(f"Erreur d'affichage : {e}")
