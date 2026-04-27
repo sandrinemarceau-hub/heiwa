@@ -4,7 +4,7 @@ from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Heiwa", page_icon="🌸")
 
-# Connexion simplifiée
+# Connexion
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("🌸 Heiwa")
@@ -17,25 +17,27 @@ with st.form("form_paix"):
 
     if envoyer and nom and message:
         try:
-            # On lit la feuille (Onglet "Feuille1")
+            # ON UTILISE "Feuille1" SANS ESPACE
             df = conn.read(worksheet="Feuille1")
-            # On ajoute le message
             nouveau = pd.DataFrame([{"Auteur": nom, "Message": message}])
             df_final = pd.concat([df, nouveau], ignore_index=True)
-            # On sauvegarde
-            conn.update(worksheet="Feuille 1", data=df_final)
+            conn.update(worksheet="Feuille1", data=df_final)
             st.success("Message envoyé !")
             st.balloons()
         except Exception as e:
-            st.error(f"Erreur : {e}")
+            st.error(f"Erreur lors de l'envoi : {e}")
 
 st.divider()
 
 # --- AFFICHAGE ---
 st.subheader("💬 Mur de bienveillance")
 try:
+    # ON UTILISE "Feuille1" SANS ESPACE
     data = conn.read(worksheet="Feuille1")
-    for i, row in data.iloc[::-1].iterrows():
-        st.write(f"**{row['Auteur']}** : {row['Message']}")
-except:
-    st.write("Le mur est vide ou inaccessible.")
+    if not data.empty:
+        for i, row in data.iloc[::-1].iterrows():
+            st.write(f"**{row['Auteur']}** : {row['Message']}")
+    else:
+        st.write("Le mur est vide pour l'instant.")
+except Exception as e:
+    st.write("Le mur est inaccessible. Vérifie le nom de l'onglet.")
