@@ -1,47 +1,54 @@
 import streamlit as st
 import random
+import pandas as pd
+from streamlit_gsheets import GSheetsConnection
 
-# Configuration de la page
+# Configuration
 st.set_page_config(page_title="Heiwa", page_icon="🌸")
 
+# Connexion à Google Sheets
+conn = st.connection("gsheets", type=GSheetsConnection)
+
 # --- STYLE ---
-# Correction ici : "unsafe_allow_html" au lieu de "unsafe_allow_status"
 st.markdown("""
     <style>
-    .main { background-color: #f0f2f6; }
-    .stButton>button { border-radius: 20px; border: 1px solid #ff4b4b; }
+    .main { background-color: #f8f9fa; }
+    .stChatMessage { border-radius: 15px; padding: 10px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- INSPIRATION ---
-citations = [
-    "La bienveillance est le langage qu'un sourd peut entendre. — Mark Twain",
-    "La paix commence par un sourire. — Mère Teresa",
-    "La douceur surpasse la force. — Proverbe japonais"
-]
-
 st.title("🌸 Heiwa")
-st.subheader("Ton sanctuaire de bienveillance")
+st.write("Un espace pour respirer et partager.")
 
-# Affichage de la pensée du jour
+# --- INSPIRATION ---
+citations = ["La paix commence par un sourire.", "La douceur surpasse la force.", "Ecouter est un cadeau."]
 st.info(random.choice(citations))
 
 st.divider()
 
-# --- ESPACE DE PARTAGE ---
-st.write("### ✍️ Partager une pensée ou un merci")
+# --- FORMULAIRE D'ENVOI ---
+with st.form("paix_form", clear_on_submit=True):
+    nom = st.text_input("Ton prénom")
+    texte = st.text_area("Ton message de bienveillance")
+    submit = st.form_submit_button("Diffuser")
 
-with st.form("formulaire_message", clear_on_submit=True):
-    nom = st.text_input("Ton prénom / Pseudo")
-    message = st.text_area("Ton message de paix")
-    envoyer = st.form_submit_button("Diffuser la lumière")
+    if submit and nom and texte:
+        # Lire les données actuelles
+        existing_data = conn.read(worksheet="Feuille 1", usecols=[0,1])
+        # Créer une nouvelle ligne
+        new_entry = pd.DataFrame([{"Auteur": nom, "Message": texte}])
+        # Fusionner et sauvegarder (on utilise ici une version simplifiée pour le test)
+        updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
+        conn.update(worksheet="Feuille 1", data=updated_df)
+        st.success("Merci pour ce partage !")
+        st.balloons()
 
-    if envoyer:
-        if nom and message:
-            st.success(f"Merci {nom} ! Ton message a été entendu.")
-            st.balloons() 
-        else:
-            st.warning("Pense à remplir les deux champs pour partager ta douceur.")
+# --- AFFICHAGE DES MESSAGES ---
+st.subheader("💬 Le mur de la bienveillance")
+# Recharger les données pour voir le dernier message
+data = conn.read(worksheet="Feuille 1")
 
-st.write("---")
-st.write("*Note : La mémoire persistante du forum est en cours de construction...*")
+for index, row in data.iloc[::-1].iterrows(): # Affiche du plus récent au plus ancien
+    with st.chat_message("user", avatar="✨"):
+        st.write(f"**{row['Auteur']}**")
+        st.write(row['Message'])
