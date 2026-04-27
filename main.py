@@ -4,29 +4,29 @@ from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Heiwa", page_icon="🌸")
 
-# Connexion
+# Connexion avec ta clé (Secrets)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("🌸 Heiwa")
 
 # --- FORMULAIRE ---
-with st.form("form_simple", clear_on_submit=True):
+with st.form("form_final", clear_on_submit=True):
     nom = st.text_input("Ton prénom")
-    msg = st.text_area("Ton message")
-    submit = st.form_submit_button("Partager")
+    message = st.text_area("Ton message")
+    envoyer = st.form_submit_button("Partager")
 
-    if submit and nom and msg:
+    if envoyer and nom and message:
         try:
-            # On lit la PREMIÈRE feuille du tableau (index 0)
-            df = conn.read(ttl=0) 
+            # On lit la première feuille disponible
+            df = conn.read()
             
-            # On ajoute le nouveau message
-            nouveau = pd.DataFrame([{"Auteur": nom, "Message": msg}])
+            # On ajoute le message
+            nouveau = pd.DataFrame([{"Auteur": nom, "Message": message}])
             df_final = pd.concat([df, nouveau], ignore_index=True)
             
-            # On met à jour
+            # On sauvegarde
             conn.update(data=df_final)
-            st.success("Message envoyé !")
+            st.success("C'est en ligne ! Merci pour ta bienveillance.")
             st.balloons()
         except Exception as e:
             st.error(f"Erreur d'envoi : {e}")
@@ -36,10 +36,10 @@ st.divider()
 # --- AFFICHAGE ---
 st.subheader("💬 Mur de bienveillance")
 try:
-    # On lit simplement la première feuille
+    # On lit la première feuille disponible avec rafraîchissement (ttl=0)
     data = conn.read(ttl=0)
     if not data.empty:
         for i, row in data.iloc[::-1].iterrows():
-            st.write(f"**{row['Auteur']}** : {row['Message']}")
+            st.info(f"**{row['Auteur']}** : {row['Message']}")
 except Exception as e:
     st.error(f"Erreur d'affichage : {e}")
