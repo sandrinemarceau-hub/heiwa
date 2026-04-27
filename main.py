@@ -1,45 +1,25 @@
 import streamlit as st
 import pandas as pd
-from streamlit_gsheets import GSheetsConnection
+from gspread_pandas import Spread, Client
 
-st.set_page_config(page_title="Heiwa", page_icon="🌸")
+st.title("🌸 Heiwa - Mode Secours")
 
-# Connexion avec ta clé (Secrets)
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-st.title("🌸 Heiwa")
-
-# --- FORMULAIRE ---
-with st.form("form_final", clear_on_submit=True):
-    nom = st.text_input("Ton prénom")
-    message = st.text_area("Ton message")
-    envoyer = st.form_submit_button("Partager")
-
-    if envoyer and nom and message:
-        try:
-            # On lit la première feuille disponible
-            df = conn.read()
-            
-            # On ajoute le message
-            nouveau = pd.DataFrame([{"Auteur": nom, "Message": message}])
-            df_final = pd.concat([df, nouveau], ignore_index=True)
-            
-            # On sauvegarde
-            conn.update(data=df_final)
-            st.success("C'est en ligne ! Merci pour ta bienveillance.")
-            st.balloons()
-        except Exception as e:
-            st.error(f"Erreur d'envoi : {e}")
-
-st.divider()
-
-# --- AFFICHAGE ---
-st.subheader("💬 Mur de bienveillance")
+# On essaie une lecture ultra-directe
 try:
-    # On lit la première feuille disponible avec rafraîchissement (ttl=0)
-    data = conn.read(ttl=0)
-    if not data.empty:
-        for i, row in data.iloc[::-1].iterrows():
-            st.info(f"**{row['Auteur']}** : {row['Message']}")
+    # On récupère l'ID directement
+    sheet_id = "1kqgDes1pF13T5VrM7P-Qcd69UaxG5I3E-n0Lq_6J6Vw"
+    
+    # On affiche un message de patience
+    with st.spinner("Connexion au mur de bienveillance..."):
+        # On utilise une méthode de lecture différente
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv"
+        data = pd.read_csv(url)
+        
+    st.success("Connexion établie !")
+    
+    for i, row in data.iloc[::-1].iterrows():
+        st.info(f"**{row['Auteur']}** : {row['Message']}")
+
 except Exception as e:
-    st.error(f"Erreur d'affichage : {e}")
+    st.error(f"Désolé, le mur est encore timide. Erreur : {e}")
+    st.info("Vérifie bien que ton Google Sheet est en 'Tous les utilisateurs disposant du lien : LECTEUR' pour ce test.")
