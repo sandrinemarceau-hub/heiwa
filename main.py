@@ -3,121 +3,139 @@ import gspread
 import pandas as pd
 import json
 import time
+import random
 
-# --- 1. CONFIGURATION & DESIGN "DOUX" ---
+# --- 1. DESIGN AVANCÉ (CSS) ---
 st.set_page_config(page_title="Heiwa", page_icon="🌸", layout="centered")
 
-# CSS pour injecter de la douceur
 st.markdown("""
     <style>
-    /* Fond de page crème doux */
-    .stApp {
-        background-color: #FFFDF5;
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap');
+
+    html, body, [data-testid="stAppViewContainer"] {
+        font-family: 'Quicksand', sans-serif;
+        background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
     }
-    /* Style des titres */
-    h1, h2, h3 {
-        color: #5D4037;
-        font-family: 'Lexend', sans-serif;
+
+    /* Cartes Glassmorphism */
+    .stChatMessage {
+        background: rgba(255, 255, 255, 0.4) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 20px !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        margin-bottom: 15px !important;
     }
-    /* Bulles de messages arrondies */
-    div[data-testimonial="true"], .stChatMessage {
-        background-color: #FFFFFF !important;
-        border-radius: 25px !important;
-        border: 1px solid #FFE0B2 !important;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+
+    /* Style du menu latéral */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(255, 255, 255, 0.8) !important;
     }
-    /* Boutons joyeux */
+
+    /* Boutons personnalisés */
     .stButton>button {
-        border-radius: 20px;
-        background-color: #FFECB3;
-        border: none;
-        color: #5D4037;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #FFE082;
-        transform: scale(1.05);
+        width: 100%;
+        border-radius: 30px !important;
+        border: none !important;
+        background: linear-gradient(90deg, #FFDEE9 0%, #B5FFFC 100%) !important;
+        color: #4A4A4A !important;
+        font-weight: 600 !important;
+        padding: 10px 20px !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. CONNEXION GOOGLE SHEETS ---
+# --- 2. CONNEXION ---
 @st.cache_resource
 def connect_to_sheet():
-    service_account_info = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
-    gc = gspread.service_account_from_dict(service_account_info)
+    info = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
+    gc = gspread.service_account_from_dict(info)
     sh = gc.open_by_key("1kqgDes1pF13T5VrM7P-Qcd69UaxG5I3E-n0Lq_6J6Vw")
     return sh.get_worksheet(0)
 
-try:
-    worksheet = connect_to_sheet()
-except Exception as e:
-    st.error("Connexion en cours...")
-    st.stop()
+worksheet = connect_to_sheet()
 
-# --- 3. ARCHITECTURE (MENU LATÉRAL) ---
-st.sidebar.title("🌸 Heiwa")
-st.sidebar.markdown("Ton refuge de poche.")
-page = st.sidebar.radio("Où veux-tu aller ?", ["Le Mur", "La Bulle", "Inspiration"])
+# --- 3. NAVIGATION ---
+st.sidebar.markdown("# 🌸 Heiwa")
+menu = st.sidebar.selection_state = st.sidebar.radio(
+    "Navigation", 
+    ["💬 Le Mur", "🌬️ Respiration", "📖 Journal d'Or"]
+)
 
-# --- PAGE 1 : LE MUR (TON CODE ACTUEL) ---
-if page == "Le Mur":
-    st.title("💬 Le Mur de Bienveillance")
-    st.write("Dépose une pensée, repars avec un sourire.")
+# --- PAGE 1 : LE MUR ---
+if menu == "💬 Le Mur":
+    st.title("Le Mur de Bienveillance")
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        nom = st.text_input("Ton prénom", placeholder="Ex: Amélie")
+    with col2:
+        humeur = st.selectbox("Ton énergie", ["✨ Joie", "🌿 Calme", "💖 Amour", "☁️ Besoin d'écoute"])
 
-    with st.form("form_paix", clear_on_submit=True):
-        nom = st.text_input("Ton prénom")
-        message = st.text_area("Ton message de douceur")
-        submit = st.form_submit_button("Diffuser la joie")
-
-        if submit and nom and message:
-            worksheet.append_row([nom, message])
-            st.success("C'est envoyé !")
+    message = st.text_area("Ton message", placeholder="Écris quelque chose de doux...")
+    
+    if st.button("Diffuser cette énergie"):
+        if nom and message:
+            worksheet.append_row([nom, message, humeur])
             st.balloons()
+            st.rerun()
 
     st.divider()
+
+    # Affichage des messages
     data = pd.DataFrame(worksheet.get_all_records())
     if not data.empty:
+        # On s'assure que la colonne 'Energie' existe pour les anciens messages
+        if 'Energie' not in data.columns: data['Energie'] = "✨ Douceur"
+        
         for i, row in data.iloc[::-1].iterrows():
-            with st.chat_message("user", avatar="✨"):
-                st.write(f"**{row['Auteur']}**")
+            with st.chat_message("user", avatar="🌸"):
+                st.write(f"**{row['Auteur']}** • {row.get('Energie', '✨')}")
                 st.write(row['Message'])
 
-# --- PAGE 2 : LA BULLE (RESPIRATION) ---
-elif page == "La Bulle":
-    st.title("🌬️ La Bulle de Respiration")
-    st.write("Suis le mouvement de la bulle pour apaiser ton esprit.")
+# --- PAGE 2 : RESPIRATION (VERSION AMÉLIORÉE) ---
+elif menu == "🌬️ Respiration":
+    st.title("La Bulle de Paix")
+    st.write("Ferme les yeux, ou fixe simplement la barre.")
     
-    st.info("Inspire quand la barre monte, expire quand elle descend.")
-    
-    # Simulation d'une barre de respiration douce
-    placeholder = st.empty()
-    if st.button("Démarrer une session (1 min)"):
-        for i in range(6):  # 6 cycles de 10 secondes
-            # Inspir
-            for progress in range(0, 101, 5):
-                placeholder.progress(progress, text="🌿 Inspiration...")
-                time.sleep(0.1)
-            # Expir
-            for progress in range(100, -1, -5):
-                placeholder.progress(progress, text="✨ Expiration...")
-                time.sleep(0.1)
-        st.success("Bravo. Tu as pris un instant pour toi.")
+    if st.button("Commencer le cycle"):
+        placeholder = st.empty()
+        for _ in range(3):
+            # Phase d'inspiration
+            for i in range(101):
+                placeholder.markdown(f"""
+                <div style="text-align:center;">
+                    <div style="height:20px; width:{i}%; background:linear-gradient(90deg, #B5FFFC, #FFDEE9); border-radius:10px;"></div>
+                    <p style="font-size:24px; margin-top:20px;">🌿 Inspire...</p>
+                </div>
+                """, unsafe_allow_html=True)
+                time.sleep(0.04)
+            time.sleep(1) # Rétention
+            # Phase d'expiration
+            for i in range(100, -1, -1):
+                placeholder.markdown(f"""
+                <div style="text-align:center;">
+                    <div style="height:20px; width:{i}%; background:linear-gradient(90deg, #B5FFFC, #FFDEE9); border-radius:10px;"></div>
+                    <p style="font-size:24px; margin-top:20px;">✨ Expire...</p>
+                </div>
+                """, unsafe_allow_html=True)
+                time.sleep(0.06)
+        st.success("Ton esprit est plus léger.")
 
-# --- PAGE 3 : INSPIRATION ---
-elif page == "Inspiration":
-    st.title("✨ Jardin d'Inspiration")
+# --- PAGE 3 : JOURNAL D'OR ---
+elif menu == "📖 Journal d'Or":
+    st.title("Le Journal d'Inspiration")
+    st.write("Une pensée choisie pour toi, ici et maintenant.")
+    
     citations = [
-        "Chaque petit pas compte.",
-        "Tu es assez, tel(le) que tu es.",
-        "La paix commence par un sourire.",
-        "Sois doux avec toi-même aujourd'hui.",
-        "Le ciel est toujours bleu derrière les nuages."
+        {"texte": "Rien n'est permanent, sauf le changement. Souris-lui.", "auteur": "Héraclite"},
+        {"texte": "Le bonheur est la seule chose qui se double quand on le partage.", "auteur": "Albert Schweitzer"},
+        {"texte": "Tu es le ciel. Tout le reste, c'est juste le temps qu'il fait.", "auteur": "Pema Chödrön"}
     ]
+    cit = random.choice(citations)
     
-    st.subheader("Ton mantra du moment :")
-    import random
-    st.warning(f"### {random.choice(citations)}")
-    
-    if st.button("Une autre pensée ?"):
-        st.rerun()
+    st.markdown(f"""
+    <div style="background: white; padding: 40px; border-radius: 30px; border-left: 10px solid #FFDEE9; box-shadow: 10px 10px 30px rgba(0,0,0,0.05);">
+        <h2 style="font-style: italic; color: #5D4037;">"{cit['texte']}"</h2>
+        <p style="text-align: right; font-weight: bold;">— {cit['auteur']}</p>
+    </div>
+    """, unsafe_allow_html=True)
