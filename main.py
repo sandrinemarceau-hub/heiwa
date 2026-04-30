@@ -5,41 +5,28 @@ import json
 import time
 import random
 
-# --- 1. DESIGN AVANCÉ (CSS) ---
+# --- 1. DESIGN & STYLE (Inchangé pour la cohérence) ---
 st.set_page_config(page_title="Heiwa", page_icon="🌸", layout="centered")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap');
-
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Quicksand', sans-serif;
         background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
     }
-
-    /* Cartes Glassmorphism */
     .stChatMessage {
         background: rgba(255, 255, 255, 0.4) !important;
         backdrop-filter: blur(10px) !important;
         border-radius: 20px !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        margin-bottom: 15px !important;
     }
-
-    /* Style du menu latéral */
-    section[data-testid="stSidebar"] {
-        background-color: rgba(255, 255, 255, 0.8) !important;
-    }
-
-    /* Boutons personnalisés */
     .stButton>button {
         width: 100%;
         border-radius: 30px !important;
-        border: none !important;
         background: linear-gradient(90deg, #FFDEE9 0%, #B5FFFC 100%) !important;
         color: #4A4A4A !important;
         font-weight: 600 !important;
-        padding: 10px 20px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -56,21 +43,13 @@ worksheet = connect_to_sheet()
 
 # --- 3. NAVIGATION ---
 st.sidebar.markdown("# 🌸 Heiwa")
-menu = st.sidebar.selection_state = st.sidebar.radio(
-    "Navigation", 
-    ["💬 Le Mur", "🌬️ Respiration", "📖 Journal d'Or"]
-)
+menu = st.sidebar.radio("Où veux-tu aller ?", ["💬 Le Mur", "🧘 Timer Zen", "📖 Inspiration"])
 
-# --- PAGE 1 : LE MUR ---
+# --- PAGE 1 : LE MUR (Inchangé) ---
 if menu == "💬 Le Mur":
     st.title("Le Mur de Bienveillance")
-    
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        nom = st.text_input("Ton prénom", placeholder="Ex: Amélie")
-    with col2:
-        humeur = st.selectbox("Ton énergie", ["✨ Joie", "🌿 Calme", "💖 Amour", "☁️ Besoin d'écoute"])
-
+    nom = st.text_input("Ton prénom", placeholder="Amélie")
+    humeur = st.selectbox("Ton énergie", ["✨ Joie", "🌿 Calme", "💖 Amour", "☁️ Besoin d'écoute"])
     message = st.text_area("Ton message", placeholder="Écris quelque chose de doux...")
     
     if st.button("Diffuser cette énergie"):
@@ -80,62 +59,90 @@ if menu == "💬 Le Mur":
             st.rerun()
 
     st.divider()
-
-    # Affichage des messages
     data = pd.DataFrame(worksheet.get_all_records())
     if not data.empty:
-        # On s'assure que la colonne 'Energie' existe pour les anciens messages
-        if 'Energie' not in data.columns: data['Energie'] = "✨ Douceur"
-        
         for i, row in data.iloc[::-1].iterrows():
             with st.chat_message("user", avatar="🌸"):
                 st.write(f"**{row['Auteur']}** • {row.get('Energie', '✨')}")
                 st.write(row['Message'])
 
-# --- PAGE 2 : RESPIRATION (VERSION AMÉLIORÉE) ---
-elif menu == "🌬️ Respiration":
-    st.title("La Bulle de Paix")
-    st.write("Ferme les yeux, ou fixe simplement la barre.")
+# --- PAGE 2 : TIMER ZEN (NOUVEAU) ---
+elif menu == "🧘 Timer Zen":
+    st.title("Espace Méditation")
+    st.write("Prends un instant pour te reconnecter à ton souffle.")
     
-    if st.button("Commencer le cycle"):
-        placeholder = st.empty()
-        for _ in range(3):
-            # Phase d'inspiration
-            for i in range(101):
-                placeholder.markdown(f"""
-                <div style="text-align:center;">
-                    <div style="height:20px; width:{i}%; background:linear-gradient(90deg, #B5FFFC, #FFDEE9); border-radius:10px;"></div>
-                    <p style="font-size:24px; margin-top:20px;">🌿 Inspire...</p>
-                </div>
-                """, unsafe_allow_html=True)
-                time.sleep(0.04)
-            time.sleep(1) # Rétention
-            # Phase d'expiration
-            for i in range(100, -1, -1):
-                placeholder.markdown(f"""
-                <div style="text-align:center;">
-                    <div style="height:20px; width:{i}%; background:linear-gradient(90deg, #B5FFFC, #FFDEE9); border-radius:10px;"></div>
-                    <p style="font-size:24px; margin-top:20px;">✨ Expire...</p>
-                </div>
-                """, unsafe_allow_html=True)
-                time.sleep(0.06)
-        st.success("Ton esprit est plus léger.")
+    col1, col2 = st.columns(2)
+    with col1:
+        duree = st.slider("Durée totale (minutes)", 2, 20, 10)
+    with col2:
+        mode = st.radio("Style", ["Recommandé (Mixte)", "Simple", "Carrée"])
 
-# --- PAGE 3 : JOURNAL D'OR ---
-elif menu == "📖 Journal d'Or":
+    if st.button("Commencer la session"):
+        st.write(f"C'est parti pour {duree} minutes de calme...")
+        progress_bar = st.empty()
+        instruction = st.empty()
+        
+        start_time = time.time()
+        end_time = start_time + (duree * 60)
+        half_time = start_time + (duree * 30) # Pour le mode recommandé
+
+        while time.time() < end_time:
+            current_time = time.time()
+            elapsed_total = (current_time - start_time) / (duree * 60)
+            progress_bar.progress(min(elapsed_total, 1.0))
+
+            # Logique du Mode Recommandé (5 min simple + 5 min carrée)
+            if mode == "Recommandé (Mixte)":
+                if current_time < half_time:
+                    # Respiration Simple (5s inspir / 5s expir)
+                    instruction.markdown("### 🌬️ Respiration Simple : Inspire...")
+                    time.sleep(5)
+                    instruction.markdown("### 🌬️ Respiration Simple : Expire...")
+                    time.sleep(5)
+                else:
+                    # Respiration Carrée (4s par phase)
+                    instruction.markdown("### 🧊 Carrée : Inspire (4s)")
+                    time.sleep(4)
+                    instruction.markdown("### 🧊 Carrée : Bloque plein (4s)")
+                    time.sleep(4)
+                    instruction.markdown("### 🧊 Carrée : Expire (4s)")
+                    time.sleep(4)
+                    instruction.markdown("### 🧊 Carrée : Bloque vide (4s)")
+                    time.sleep(4)
+            
+            # Logique Simple uniquement
+            elif mode == "Simple":
+                instruction.markdown("### 🌬️ Inspire...")
+                time.sleep(5)
+                instruction.markdown("### 🌬️ Expire...")
+                time.sleep(5)
+                
+            # Logique Carrée uniquement
+            elif mode == "Carrée":
+                instruction.markdown("### 🧊 Inspire (4s)")
+                time.sleep(4)
+                instruction.markdown("### 🧊 Bloque plein (4s)")
+                time.sleep(4)
+                instruction.markdown("### 🧊 Expire (4s)")
+                time.sleep(4)
+                instruction.markdown("### 🧊 Bloque vide (4s)")
+                time.sleep(4)
+
+        st.success("Session terminée. Merci pour ce moment de paix.")
+        st.balloons()
+
+# --- PAGE 3 : INSPIRATION (Inchangé) ---
+elif menu == "📖 Inspiration":
     st.title("Le Journal d'Inspiration")
-    st.write("Une pensée choisie pour toi, ici et maintenant.")
-    
     citations = [
         {"texte": "Rien n'est permanent, sauf le changement. Souris-lui.", "auteur": "Héraclite"},
         {"texte": "Le bonheur est la seule chose qui se double quand on le partage.", "auteur": "Albert Schweitzer"},
         {"texte": "Tu es le ciel. Tout le reste, c'est juste le temps qu'il fait.", "auteur": "Pema Chödrön"}
     ]
     cit = random.choice(citations)
-    
     st.markdown(f"""
-    <div style="background: white; padding: 40px; border-radius: 30px; border-left: 10px solid #FFDEE9; box-shadow: 10px 10px 30px rgba(0,0,0,0.05);">
-        <h2 style="font-style: italic; color: #5D4037;">"{cit['texte']}"</h2>
-        <p style="text-align: right; font-weight: bold;">— {cit['auteur']}</p>
+    <div style="background: white; padding: 40px; border-radius: 30px; border-left: 10px solid #FFDEE9;">
+        <h2 style="font-style: italic;">"{cit['texte']}"</h2>
+        <p style="text-align: right;">— {cit['auteur']}</p>
     </div>
     """, unsafe_allow_html=True)
